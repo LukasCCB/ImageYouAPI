@@ -12,31 +12,42 @@ ImageYouAPI is a simple and efficient REST API built with Laravel 12 for managin
 
 ## API Endpoints
 
-### 1. Upload an Image
+### 1. Upload Image(s)
 **Endpoint**: `POST /api/v1/upload`
 
 **Request Body**:
-- `image` (file): The image file to upload.
+- `type` (image \ video): If upload file is a video or image.
+- `image` (file): The image file to upload. Its array.
 - `reference` (text): The folder name where the image will be stored.
 - `format` (text): The desired image format (e.g., `jpeg`, `png`, `gif`, `webp`, `avif`).
 
 **Example Request**:
 ```http
 POST /api/v1/upload
-Accept: application/json
+Accept: multipart/form-data
 
-{
-    "image": "example.jpg",
-    "reference": "melao",
-    "format": "webp"
-}
+type: image
+image[]: example.jpg
+image[]: other_image.jpg
+image[]: three_image.jpg
+reference: melao
+format: webp
 ```
 
 **Example Response**:
 ```json
 {
-  "id": "8acd1e2f-1308-4be5-bf45-c798a073cd13",
-  "url": "http://imageyouapi.test/images/melao/8acd1e2f-1308-4be5-bf45-c798a073cd13.webp"
+    "message": "Upload iniciado, imagens serão processadas",
+    "images": [
+        {
+            "id": "b832a635-2eb4-46c5-9a53-dc975dd5713d",
+            "url": "http://imageyouapi.test/storage/images/melao/b832a635-2eb4-46c5-9a53-dc975dd5713d.webp"
+        },
+        {
+            "id": "de4e3866-c9ec-4cda-b1f6-8085834d4a29",
+            "url": "http://imageyouapi.test/storage/images/melao/de4e3866-c9ec-4cda-b1f6-8085834d4a29.webp"
+        }
+    ]
 }
 ```
 
