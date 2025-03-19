@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessImageJob;
 use Illuminate\Http\Request;
 use App\Models\Image;
 use App\Helper\Helper;
@@ -13,33 +14,37 @@ class UploadImageController extends Controller
     public function store(Request $request)
     {
         try {
-            $hash = Str::uuid()->toString();
-
             $request->validate([
-                'image' => 'required|image|mimes:jpg,jpeg,png,webp,gif,avif|max:5120',
+                'image' => 'required|array', // Permite múltiplos arquivos
+                'image.*' => 'required|image|mimes:jpg,jpeg,png,webp,gif,avif|max:5120',
                 'reference' => 'required|string|min:5|max:100|regex:/^[a-zA-Z0-9_-]+$/',
                 'format' => 'required|in:jpg,png,webp,gif,avif',
             ]);
 
-            $imagePath = Helper::processImage(
-                $request->file('image'),
-                [
-                    'format' => $request->input('format', 'webp'),
-                    'reference' => $request->reference
-                ],
-                $hash
-            );
+            $reference = $request->reference;
+            $format = $request->format;
+            $uploadedImages = [];
 
-            $image = Image::create([
-                'hash' => $hash,
-                'path' => $imagePath,
-                'original_name' => $request->file('image')->getClientOriginalName()
-            ]);
+            foreach ($request->file('image') as $image) {
+                $hash = Str::uuid()->toString();
+                $tempPath = "temp/{$hash}.{$image->getClientOriginalExtension()}";
+
+                // Salva a imagem temporariamente antes de processar
+                Storage::disk('local')->put($tempPath, file_get_contents($image));
+
+                // Envia para o Job para processamento assíncrono
+                ProcessImageJob::dispatch($tempPath, $reference, $format, $hash);
+
+                $uploadedImages[] = [
+                    'id' => $hash,
+                    'url' => Storage::disk('public')->url("images/{$reference}/{$hash}.{$format}") // URL final esperada
+                ];
+            }
 
             return response()->json([
-                'id' => $image->hash,
-                'url' => Storage::disk('public')->url($imagePath)
-            ], 201);
+                'message' => 'Upload iniciado, imagens serão processadas',
+                'images' => $uploadedImages
+            ], 202);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error uploading image',

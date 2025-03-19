@@ -17,25 +17,22 @@ class Helper
     {
         try {
             $format = $config['format'] ?? 'webp';
-            $name = $hash; // Já é um UUID, não precisa de mais modificações
+            $name = $hash;
             $reference = preg_replace('/[^a-zA-Z0-9_-]/', '_', $config['reference']);
 
             $path = "images/{$reference}/{$name}.{$format}";
 
-            // Verifica se o diretório existe, se não, cria
             $directory = "images/{$reference}";
             if (!Storage::disk('public')->exists($directory)) {
                 Storage::disk('public')->makeDirectory($directory);
             }
 
-            // Armazena a imagem
             $storedPath = Storage::disk('public')->putFileAs(
                 $directory,
                 $image,
                 "{$name}.{$format}"
             );
 
-            // Otimiza a imagem
             try {
                 $optimizerChain = OptimizerChainFactory::create();
                 $optimizerChain->optimize(storage_path("app/public/{$storedPath}"));
